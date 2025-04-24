@@ -3,6 +3,7 @@
 #include "control_module/global.h"
 #include <std_msgs/msg/float32.hpp>
 #include <std_msgs/msg/float64_multi_array.hpp>
+#include "control_module/keyboard_joint_controller.h"
 
 namespace xyber_x1_infer::rl_control_module {
 
@@ -57,6 +58,8 @@ bool ControlModule::Initialize(aimrt::CoreRef core) {
           controller_map_[controller_name] = std::make_shared<RLController>(use_sim_handles_);
         } else if (controller_name.substr(0, 3) == "pd_") {
           controller_map_[controller_name] = std::make_shared<PDController>(use_sim_handles_);
+        } else if (controller_name.substr(0, 3) == "kb_") {
+           controller_map_[controller_name] = std::make_shared<KeyboardJointController>(use_sim_handles_);
         } else {
           AIMRT_ERROR("Unknown controller type: {}", controller_name);
         }
