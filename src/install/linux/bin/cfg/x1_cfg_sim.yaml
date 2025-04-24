@@ -49,7 +49,7 @@ aimrt:
     pkgs: # 要加载的动态库配置
       - path: ./libpkg1.so
         enable_modules:
-          - JoyStickModule
+          #- JoyStickModule
           - ControlModule
           - SimModule
     modules: # 模块
