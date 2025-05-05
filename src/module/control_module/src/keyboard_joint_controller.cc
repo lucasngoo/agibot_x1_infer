@@ -82,13 +82,13 @@ void KeyboardJointController::InitJointIndices() {
   // Find indices for joints on both sides
   left_indices_.shoulder_pitch = -1;
   left_indices_.elbow_pitch = -1;
-  left_indices_.wrist_pitch = -1;
   left_indices_.wrist_roll = -1;
+  left_indices_.elbow_yaw = -1;
   
   right_indices_.shoulder_pitch = -1;
   right_indices_.elbow_pitch = -1;
-  right_indices_.wrist_pitch = -1;
   right_indices_.wrist_roll = -1;
+  right_indices_.elbow_yaw = -1;
   
   lumbar_yaw_idx_ = -1;
   
@@ -96,14 +96,14 @@ void KeyboardJointController::InitJointIndices() {
     // Left arm joints
     if (joint_names_[i] == "left_shoulder_pitch_joint") left_indices_.shoulder_pitch = i;
     else if (joint_names_[i] == "left_elbow_pitch_joint") left_indices_.elbow_pitch = i;
-    else if (joint_names_[i] == "left_wrist_pitch_joint") left_indices_.wrist_pitch = i;
     else if (joint_names_[i] == "left_wrist_roll_joint") left_indices_.wrist_roll = i;
+    else if (joint_names_[i] == "left_elbow_yaw_joint") left_indices_.elbow_yaw = i;
     
     // Right arm joints
     else if (joint_names_[i] == "right_shoulder_pitch_joint") right_indices_.shoulder_pitch = i;
     else if (joint_names_[i] == "right_elbow_pitch_joint") right_indices_.elbow_pitch = i;
-    else if (joint_names_[i] == "right_wrist_pitch_joint") right_indices_.wrist_pitch = i;
     else if (joint_names_[i] == "right_wrist_roll_joint") right_indices_.wrist_roll = i;
+    else if (joint_names_[i] == "right_elbow_yaw_joint") right_indices_.elbow_yaw = i;
     
     // Lumbar joint
     else if (joint_names_[i] == "lumbar_yaw_joint") lumbar_yaw_idx_ = i;
@@ -118,10 +118,10 @@ void KeyboardJointController::UpdateKeyMappings() {
   const JointIndices& indices = use_left_arm_ ? left_indices_ : right_indices_;
   
   // Create new mappings based on the requested controls
-  // w/s - shoulder_pitch_joint up and down
+  // w/s - shoulder_pitch_joint down and up (reversed)
   if (indices.shoulder_pitch >= 0) {
-    key_mappings_.push_back({'w', indices.shoulder_pitch, 1.0});  // Up
-    key_mappings_.push_back({'s', indices.shoulder_pitch, -1.0}); // Down
+    key_mappings_.push_back({'w', indices.shoulder_pitch, -1.0});  // Down
+    key_mappings_.push_back({'s', indices.shoulder_pitch, 1.0});   // Up
   }
   
   // q/e - elbow_pitch_joint up and down
@@ -130,22 +130,22 @@ void KeyboardJointController::UpdateKeyMappings() {
     key_mappings_.push_back({'e', indices.elbow_pitch, -1.0}); // Down
   }
   
-  // i/k - wrist_roll_joint up and down
+  // i/k - wrist_roll_joint down and up (reversed)
   if (indices.wrist_roll >= 0) {
-    key_mappings_.push_back({'i', indices.wrist_roll, 1.0});  // Up
-    key_mappings_.push_back({'k', indices.wrist_roll, -1.0}); // Down
+    key_mappings_.push_back({'i', indices.wrist_roll, -1.0});  // Down
+    key_mappings_.push_back({'k', indices.wrist_roll, 1.0});   // Up
   }
   
-  // j/l - wrist_pitch_joint up and down
-  if (indices.wrist_pitch >= 0) {
-    key_mappings_.push_back({'j', indices.wrist_pitch, 1.0});  // Up
-    key_mappings_.push_back({'l', indices.wrist_pitch, -1.0}); // Down
+  // j/l - elbow_yaw_joint up and down
+  if (indices.elbow_yaw >= 0) {
+    key_mappings_.push_back({'j', indices.elbow_yaw, 1.0});  // Up
+    key_mappings_.push_back({'l', indices.elbow_yaw, -1.0}); // Down
   }
   
-  // a/d - lumbar_yaw_joint down and up (this is shared, not arm-specific)
+  // a/d - lumbar_yaw_joint up and down (this is shared, not arm-specific)
   if (lumbar_yaw_idx_ >= 0) {
-    key_mappings_.push_back({'a', lumbar_yaw_idx_, -1.0}); // Down
-    key_mappings_.push_back({'d', lumbar_yaw_idx_, 1.0});  // Up
+    key_mappings_.push_back({'a', lumbar_yaw_idx_, 1.0});  // Up
+    key_mappings_.push_back({'d', lumbar_yaw_idx_, -1.0}); // Down
   }
 }
 
