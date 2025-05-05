@@ -136,10 +136,17 @@ void KeyboardJointController::UpdateKeyMappings() {
     key_mappings_.push_back({'k', indices.wrist_roll, 1.0});   // Up
   }
   
-  // j/l - elbow_yaw_joint up and down
+  // j/l - elbow_yaw_joint control (direction depends on which arm is active)
   if (indices.elbow_yaw >= 0) {
-    key_mappings_.push_back({'j', indices.elbow_yaw, 1.0});  // Up
-    key_mappings_.push_back({'l', indices.elbow_yaw, -1.0}); // Down
+    if (use_left_arm_) {
+      // Left arm: j=up, l=down
+      key_mappings_.push_back({'j', indices.elbow_yaw, 1.0});   // Up
+      key_mappings_.push_back({'l', indices.elbow_yaw, -1.0});  // Down
+    } else {
+      // Right arm: j=down, l=up (reversed)
+      key_mappings_.push_back({'j', indices.elbow_yaw, -1.0});  // Down
+      key_mappings_.push_back({'l', indices.elbow_yaw, 1.0});   // Up
+    }
   }
   
   // a/d - lumbar_yaw_joint up and down (this is shared, not arm-specific)
