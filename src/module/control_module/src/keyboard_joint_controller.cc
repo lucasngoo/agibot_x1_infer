@@ -26,7 +26,7 @@ void RestoreKeyboard() {
 }
 
 KeyboardJointController::KeyboardJointController(const bool use_sim_handles)
-    : ControllerBase(use_sim_handles) {}
+    : ControllerBase(use_sim_handles), use_left_arm_(true) {}
 
 KeyboardJointController::~KeyboardJointController() {
   running_ = false;
@@ -65,55 +65,88 @@ void KeyboardJointController::Init(const YAML::Node &cfg_node) {
     angle_increment_ = cfg_node["angle_increment"].as<double>();
   }
   
-  // Set up keyboard mappings for left arm joints
-  // Find indices for the 7 left arm joints
-  int shoulder_pitch_idx = -1, shoulder_roll_idx = -1, shoulder_yaw_idx = -1;
-  int elbow_pitch_idx = -1, elbow_yaw_idx = -1;
-  int wrist_pitch_idx = -1, wrist_roll_idx = -1;
+  // Initialize joint indices for both arms
+  InitJointIndices();
   
-  for (size_t i = 0; i < joint_names_.size(); i++) {
-    if (joint_names_[i] == "left_shoulder_pitch_joint") shoulder_pitch_idx = i;
-    else if (joint_names_[i] == "left_shoulder_roll_joint") shoulder_roll_idx = i;
-    else if (joint_names_[i] == "left_shoulder_yaw_joint") shoulder_yaw_idx = i;
-    else if (joint_names_[i] == "left_elbow_pitch_joint") elbow_pitch_idx = i;
-    else if (joint_names_[i] == "left_elbow_yaw_joint") elbow_yaw_idx = i;
-    else if (joint_names_[i] == "left_wrist_pitch_joint") wrist_pitch_idx = i;
-    else if (joint_names_[i] == "left_wrist_roll_joint") wrist_roll_idx = i;
-  }
-  
-  // Define key mappings if joints were found
-  if (shoulder_pitch_idx >= 0) {
-    key_mappings_.push_back({'q', shoulder_pitch_idx, 1.0});  // Increase
-    key_mappings_.push_back({'a', shoulder_pitch_idx, -1.0}); // Decrease
-  }
-  if (shoulder_roll_idx >= 0) {
-    key_mappings_.push_back({'w', shoulder_roll_idx, 1.0});
-    key_mappings_.push_back({'s', shoulder_roll_idx, -1.0});
-  }
-  if (shoulder_yaw_idx >= 0) {
-    key_mappings_.push_back({'e', shoulder_yaw_idx, 1.0});
-    key_mappings_.push_back({'d', shoulder_yaw_idx, -1.0});
-  }
-  if (elbow_pitch_idx >= 0) {
-    key_mappings_.push_back({'r', elbow_pitch_idx, 1.0});
-    key_mappings_.push_back({'f', elbow_pitch_idx, -1.0});
-  }
-  if (elbow_yaw_idx >= 0) {
-    key_mappings_.push_back({'t', elbow_yaw_idx, 1.0});
-    key_mappings_.push_back({'g', elbow_yaw_idx, -1.0});
-  }
-  if (wrist_pitch_idx >= 0) {
-    key_mappings_.push_back({'y', wrist_pitch_idx, 1.0});
-    key_mappings_.push_back({'h', wrist_pitch_idx, -1.0});
-  }
-  if (wrist_roll_idx >= 0) {
-    key_mappings_.push_back({'u', wrist_roll_idx, 1.0});
-    key_mappings_.push_back({'j', wrist_roll_idx, -1.0});
-  }
+  // Set up initial key mappings for left arm (default)
+  UpdateKeyMappings();
   
   // Start keyboard input thread
   SetupNonBlockingKeyboard();
   keyboard_thread_ = std::thread(&KeyboardJointController::KeyboardInputThread, this);
+  
+  std::cout << "Keyboard Joint Controller initialized. Using left arm. Press 'z' to toggle arms." << std::endl;
+}
+
+void KeyboardJointController::InitJointIndices() {
+  // Find indices for joints on both sides
+  left_indices_.shoulder_pitch = -1;
+  left_indices_.elbow_pitch = -1;
+  left_indices_.wrist_pitch = -1;
+  left_indices_.wrist_roll = -1;
+  
+  right_indices_.shoulder_pitch = -1;
+  right_indices_.elbow_pitch = -1;
+  right_indices_.wrist_pitch = -1;
+  right_indices_.wrist_roll = -1;
+  
+  lumbar_yaw_idx_ = -1;
+  
+  for (size_t i = 0; i < joint_names_.size(); i++) {
+    // Left arm joints
+    if (joint_names_[i] == "left_shoulder_pitch_joint") left_indices_.shoulder_pitch = i;
+    else if (joint_names_[i] == "left_elbow_pitch_joint") left_indices_.elbow_pitch = i;
+    else if (joint_names_[i] == "left_wrist_pitch_joint") left_indices_.wrist_pitch = i;
+    else if (joint_names_[i] == "left_wrist_roll_joint") left_indices_.wrist_roll = i;
+    
+    // Right arm joints
+    else if (joint_names_[i] == "right_shoulder_pitch_joint") right_indices_.shoulder_pitch = i;
+    else if (joint_names_[i] == "right_elbow_pitch_joint") right_indices_.elbow_pitch = i;
+    else if (joint_names_[i] == "right_wrist_pitch_joint") right_indices_.wrist_pitch = i;
+    else if (joint_names_[i] == "right_wrist_roll_joint") right_indices_.wrist_roll = i;
+    
+    // Lumbar joint
+    else if (joint_names_[i] == "lumbar_yaw_joint") lumbar_yaw_idx_ = i;
+  }
+}
+
+void KeyboardJointController::UpdateKeyMappings() {
+  // Clear existing mappings
+  key_mappings_.clear();
+  
+  // Get current arm's indices
+  const JointIndices& indices = use_left_arm_ ? left_indices_ : right_indices_;
+  
+  // Create new mappings based on the requested controls
+  // w/s - shoulder_pitch_joint up and down
+  if (indices.shoulder_pitch >= 0) {
+    key_mappings_.push_back({'w', indices.shoulder_pitch, 1.0});  // Up
+    key_mappings_.push_back({'s', indices.shoulder_pitch, -1.0}); // Down
+  }
+  
+  // q/e - elbow_pitch_joint up and down
+  if (indices.elbow_pitch >= 0) {
+    key_mappings_.push_back({'q', indices.elbow_pitch, 1.0});  // Up
+    key_mappings_.push_back({'e', indices.elbow_pitch, -1.0}); // Down
+  }
+  
+  // i/k - wrist_roll_joint up and down
+  if (indices.wrist_roll >= 0) {
+    key_mappings_.push_back({'i', indices.wrist_roll, 1.0});  // Up
+    key_mappings_.push_back({'k', indices.wrist_roll, -1.0}); // Down
+  }
+  
+  // j/l - wrist_pitch_joint up and down
+  if (indices.wrist_pitch >= 0) {
+    key_mappings_.push_back({'j', indices.wrist_pitch, 1.0});  // Up
+    key_mappings_.push_back({'l', indices.wrist_pitch, -1.0}); // Down
+  }
+  
+  // a/d - lumbar_yaw_joint down and up (this is shared, not arm-specific)
+  if (lumbar_yaw_idx_ >= 0) {
+    key_mappings_.push_back({'a', lumbar_yaw_idx_, -1.0}); // Down
+    key_mappings_.push_back({'d', lumbar_yaw_idx_, 1.0});  // Up
+  }
 }
 
 void KeyboardJointController::RestartController() {
@@ -178,6 +211,14 @@ void KeyboardJointController::KeyboardInputThread() {
     // Read any available key presses
     while (read(STDIN_FILENO, &ch, 1) > 0) {
       std::lock_guard<std::mutex> lock(keys_mutex_);
+      
+      // Check for arm toggle key 'z'
+      if (ch == 'z') {
+        use_left_arm_ = !use_left_arm_;
+        UpdateKeyMappings();
+        std::cout << "Switched to " << (use_left_arm_ ? "left" : "right") << " arm controls." << std::endl;
+        continue;
+      }
       
       // Mark this key as pressed
       for (const auto& mapping : key_mappings_) {
