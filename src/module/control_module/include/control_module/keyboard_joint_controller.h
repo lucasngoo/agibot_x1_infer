@@ -24,6 +24,7 @@ class KeyboardJointController : public ControllerBase {
   // Structure to hold joint indices for each arm
   struct JointIndices {
     int shoulder_pitch;
+    int shoulder_yaw;
     int elbow_pitch;
     int wrist_roll;
     int elbow_yaw;
