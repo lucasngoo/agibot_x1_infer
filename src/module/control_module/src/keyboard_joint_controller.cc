@@ -81,12 +81,14 @@ void KeyboardJointController::Init(const YAML::Node &cfg_node) {
 void KeyboardJointController::InitJointIndices() {
   // Find indices for joints on both sides
   left_indices_.shoulder_pitch = -1;
+  left_indices_.shoulder_yaw = -1;
   left_indices_.shoulder_roll = -1;
   left_indices_.elbow_pitch = -1;
   left_indices_.wrist_roll = -1;
   left_indices_.elbow_yaw = -1;
   
   right_indices_.shoulder_pitch = -1;
+  right_indices_.shoulder_yaw = -1;
   right_indices_.shoulder_roll = -1;
   right_indices_.elbow_pitch = -1;
   right_indices_.wrist_roll = -1;
@@ -97,6 +99,7 @@ void KeyboardJointController::InitJointIndices() {
   for (size_t i = 0; i < joint_names_.size(); i++) {
     // Left arm joints
     if (joint_names_[i] == "left_shoulder_pitch_joint") left_indices_.shoulder_pitch = i;
+    else if (joint_names_[i] == "left_shoulder_yaw_joint") left_indices_.shoulder_yaw = i;
     else if (joint_names_[i] == "left_shoulder_roll_joint") left_indices_.shoulder_roll = i;
     else if (joint_names_[i] == "left_elbow_pitch_joint") left_indices_.elbow_pitch = i;
     else if (joint_names_[i] == "left_wrist_roll_joint") left_indices_.wrist_roll = i;
@@ -104,6 +107,7 @@ void KeyboardJointController::InitJointIndices() {
     
     // Right arm joints
     else if (joint_names_[i] == "right_shoulder_pitch_joint") right_indices_.shoulder_pitch = i;
+    else if (joint_names_[i] == "right_shoulder_yaw_joint") right_indices_.shoulder_yaw = i;
     else if (joint_names_[i] == "right_shoulder_roll_joint") right_indices_.shoulder_roll = i;
     else if (joint_names_[i] == "right_elbow_pitch_joint") right_indices_.elbow_pitch = i;
     else if (joint_names_[i] == "right_wrist_roll_joint") right_indices_.wrist_roll = i;
@@ -153,6 +157,19 @@ void KeyboardJointController::UpdateKeyMappings() {
     }
   }
   
+  // a/d - shoulder_yaw_joint control (direction depends on which arm is active)
+  if (indices.shoulder_yaw >= 0) {
+    if (use_left_arm_) {
+      // Left arm: a=up, d=down
+      key_mappings_.push_back({'a', indices.shoulder_yaw, 1.0});   // Up
+      key_mappings_.push_back({'d', indices.shoulder_yaw, -1.0});  // Down
+    } else {
+      // Right arm: a=down, d=up (reversed)
+      key_mappings_.push_back({'a', indices.shoulder_yaw, -1.0});  // Down
+      key_mappings_.push_back({'d', indices.shoulder_yaw, 1.0});   // Up
+    }
+  }
+
   // u/o - shoulder_roll_joint control (direction depends on which arm is active)
   if (indices.shoulder_roll >= 0) {
     if (use_left_arm_) {
@@ -166,10 +183,10 @@ void KeyboardJointController::UpdateKeyMappings() {
     }
   }
   
-  // a/d - lumbar_yaw_joint up and down (this is shared, not arm-specific)
+  // x/c - lumbar_yaw_joint up and down (this is shared, not arm-specific)
   if (lumbar_yaw_idx_ >= 0) {
-    key_mappings_.push_back({'a', lumbar_yaw_idx_, 1.0});  // Up
-    key_mappings_.push_back({'d', lumbar_yaw_idx_, -1.0}); // Down
+    key_mappings_.push_back({'x', lumbar_yaw_idx_, 1.0});  // Up
+    key_mappings_.push_back({'c', lumbar_yaw_idx_, -1.0}); // Down
   }
 }
 
