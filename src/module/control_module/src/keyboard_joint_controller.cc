@@ -173,13 +173,13 @@ void KeyboardJointController::UpdateKeyMappings() {
   // u/o - shoulder_roll_joint control (direction depends on which arm is active)
   if (indices.shoulder_roll >= 0) {
     if (use_left_arm_) {
-      // Left arm: u=up, o=down
-      key_mappings_.push_back({'u', indices.shoulder_roll, 1.0});   // Up
-      key_mappings_.push_back({'o', indices.shoulder_roll, -1.0});  // Down
+      // Left arm: u=down, o=up (reversed)
+      key_mappings_.push_back({'u', indices.shoulder_roll, -1.0});   // Down
+      key_mappings_.push_back({'o', indices.shoulder_roll, 1.0});  // Up
     } else {
-      // Right arm: u=down, o=up (reversed)
-      key_mappings_.push_back({'u', indices.shoulder_roll, -1.0});  // Down
-      key_mappings_.push_back({'o', indices.shoulder_roll, 1.0});   // Up
+      // Right arm: u=up, o=down
+      key_mappings_.push_back({'u', indices.shoulder_roll, 1.0});  // Up
+      key_mappings_.push_back({'o', indices.shoulder_roll, -1.0});   // Down
     }
   }
   
