@@ -4,6 +4,11 @@
 #include <fcntl.h>
 #include <termios.h>
 #include <unistd.h>
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <vector>
+#include <cmath>
 
 namespace xyber_x1_infer::rl_control_module {
 
@@ -26,7 +31,11 @@ void RestoreKeyboard() {
 }
 
 KeyboardJointController::KeyboardJointController(const bool use_sim_handles)
-    : ControllerBase(use_sim_handles), use_left_arm_(true) {}
+    : ControllerBase(use_sim_handles), use_left_arm_(true) {
+  // Initialize pose vectors
+  current_pose_.resize(9, 0.0);  // x,y,z,qx,qy,qz,qw,button,toggle
+  previous_pose_.resize(9, 0.0);
+}
 
 KeyboardJointController::~KeyboardJointController() {
   running_ = false;
@@ -76,6 +85,9 @@ void KeyboardJointController::Init(const YAML::Node &cfg_node) {
   keyboard_thread_ = std::thread(&KeyboardJointController::KeyboardInputThread, this);
   
   std::cout << "Keyboard Joint Controller initialized. Using left arm. Press 'z' to toggle arms." << std::endl;
+  
+  // Initialize pose data
+  ReadPoseData();
 }
 
 void KeyboardJointController::InitJointIndices() {
@@ -199,6 +211,31 @@ void KeyboardJointController::RestartController() {
 }
 
 void KeyboardJointController::Update() {
+  // Read latest pose data
+  ReadPoseData();
+  
+  // Check for significant z movement
+  {
+    std::lock_guard<std::mutex> lock(pose_mutex_);
+    if (!current_pose_.empty() && !previous_pose_.empty()) {
+      double z_diff = current_pose_[2] - previous_pose_[2];
+      
+      // If z movement exceeds threshold, simulate u/o key press
+      if (std::abs(z_diff) > movement_threshold_) {
+        std::lock_guard<std::mutex> keys_lock(keys_mutex_);
+        if (z_diff > 0) {
+          // Moving up - simulate 'o' key
+          pressed_keys_['o'] = true;
+          pressed_keys_['u'] = false;
+        } else {
+          // Moving down - simulate 'u' key
+          pressed_keys_['u'] = true;
+          pressed_keys_['o'] = false;
+        }
+      }
+    }
+  }
+  
   // Copy current joint states to our joint_positions_ for newly tracked joints
   std::lock_guard<std::shared_mutex> lock(joint_state_mutex_);
   for (size_t i = 0; i < joint_names_.size(); i++) {
@@ -272,6 +309,50 @@ void KeyboardJointController::KeyboardInputThread() {
     
     // Sleep a bit to avoid busy waiting
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
+  }
+}
+
+// New method to read pose data from CSV
+void KeyboardJointController::ReadPoseData() {
+  std::string pose_path = std::string(getenv("HOME")) + "/pose.csv";
+  std::ifstream file(pose_path);
+  
+  if (!file.is_open()) {
+    return; // Can't open file, just return
+  }
+  
+  std::string line;
+  std::vector<std::string> rows;
+  
+  // Read all lines
+  while (std::getline(file, line)) {
+    rows.push_back(line);
+  }
+  
+  // Need at least two rows (header and data)
+  if (rows.size() < 2) {
+    return;
+  }
+  
+  // Parse data row
+  std::string data_row = rows[1];
+  std::stringstream ss(data_row);
+  std::string value;
+  std::vector<double> pose_data;
+  
+  while (std::getline(ss, value, ',')) {
+    try {
+      pose_data.push_back(std::stod(value));
+    } catch (const std::exception& e) {
+      pose_data.push_back(0.0);
+    }
+  }
+  
+  // Ensure we have at least 9 values (x,y,z,qx,qy,qz,qw,button,toggle)
+  if (pose_data.size() >= 9) {
+    std::lock_guard<std::mutex> lock(pose_mutex_);
+    previous_pose_ = current_pose_;
+    current_pose_ = pose_data;
   }
 }
 

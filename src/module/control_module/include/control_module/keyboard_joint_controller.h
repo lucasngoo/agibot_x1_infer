@@ -3,6 +3,9 @@
 #include <unordered_map>
 #include <mutex>
 #include <thread>
+#include <vector>
+#include <fstream>
+#include <sstream>
 #include "control_module/controller_base.h"
 
 namespace xyber_x1_infer::rl_control_module {
@@ -20,6 +23,9 @@ class KeyboardJointController : public ControllerBase {
  private:
   // Thread for keyboard input
   void KeyboardInputThread();
+  
+  // Read pose data from CSV file
+  void ReadPoseData();
   
   // Structure to hold joint indices for each arm
   struct JointIndices {
@@ -66,6 +72,12 @@ class KeyboardJointController : public ControllerBase {
   // Store pressed keys
   std::mutex keys_mutex_;
   std::unordered_map<char, bool> pressed_keys_;
+  
+  // Pose data from CSV
+  std::mutex pose_mutex_;
+  std::vector<double> current_pose_;
+  std::vector<double> previous_pose_;
+  double movement_threshold_ = 0.03; // Threshold for movement detection
 };
 
 } // namespace xyber_x1_infer::rl_control_module 
