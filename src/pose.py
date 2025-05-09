@@ -37,4 +37,4 @@ while True:
         writer.writerow(row)
         print(row)
 
-    time.sleep(0.1)
+    time.sleep(0.05)

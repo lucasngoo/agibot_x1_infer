@@ -31,7 +31,7 @@ void RestoreKeyboard() {
 }
 
 KeyboardJointController::KeyboardJointController(const bool use_sim_handles)
-    : ControllerBase(use_sim_handles), use_left_arm_(true) {
+    : ControllerBase(use_sim_handles), use_left_arm_(false) {
   // Initialize pose vectors
   current_pose_.resize(9, 0.0);  // x,y,z,qx,qy,qz,qw,button,toggle
   previous_pose_.resize(9, 0.0);
@@ -218,19 +218,83 @@ void KeyboardJointController::Update() {
   {
     std::lock_guard<std::mutex> lock(pose_mutex_);
     if (!current_pose_.empty() && !previous_pose_.empty()) {
+      double x_diff = current_pose_[0] - previous_pose_[0];
+      double y_diff = current_pose_[1] - previous_pose_[1];
       double z_diff = current_pose_[2] - previous_pose_[2];
+      bool button_pressed = current_pose_[7];
       
-      // If z movement exceeds threshold, simulate u/o key press
+      // If x movement exceeds threshold, simulate w/s/q/e key press
+      if (std::abs(x_diff) > movement_threshold_) {
+        std::lock_guard<std::mutex> keys_lock(keys_mutex_);
+        if (x_diff > 0) {
+          // Moving forward
+          if (button_pressed) {
+            pressed_keys_['q'] = true;
+	  } else {
+            pressed_keys_['w'] = true;
+          }
+        } else {
+          // Moving backward
+          if (button_pressed) {
+            pressed_keys_['q'] = false;
+          } else {
+            pressed_keys_['w'] = false;
+          }
+        }
+        if (button_pressed) {
+          pressed_keys_['e'] = !pressed_keys_['q'];
+        } else {
+          pressed_keys_['s'] = !pressed_keys_['w'];
+        }
+      }
+
+      // If y movement exceeds threshold, simulate x/c/j/l key press
+      if (std::abs(y_diff) > movement_threshold_) {
+        std::lock_guard<std::mutex> keys_lock(keys_mutex_);
+        if (y_diff > 0) {
+          // Moving right
+          if (button_pressed) {
+            pressed_keys_['j'] = true;
+          } else {
+            pressed_keys_['x'] = true;
+          }
+        } else {
+          // Moving left
+          if (button_pressed) {
+            pressed_keys_['j'] = false;
+          } else {
+            pressed_keys_['x'] = false;
+          }
+        }
+	if (button_pressed) {
+          pressed_keys_['l'] = !pressed_keys_['j'];
+	} else {
+          pressed_keys_['c'] = !pressed_keys_['x'];
+        }
+      }
+
+      // If z movement exceeds threshold, simulate u/o/i/k key press
       if (std::abs(z_diff) > movement_threshold_) {
         std::lock_guard<std::mutex> keys_lock(keys_mutex_);
         if (z_diff > 0) {
-          // Moving up - simulate 'o' key
-          pressed_keys_['o'] = true;
-          pressed_keys_['u'] = false;
+          // Moving up
+          if (button_pressed) {
+            pressed_keys_['i'] = true;
+          } else {
+            pressed_keys_['u'] = use_left_arm_ ? true : false;
+          }
         } else {
-          // Moving down - simulate 'u' key
-          pressed_keys_['u'] = true;
-          pressed_keys_['o'] = false;
+          // Moving down
+          if (button_pressed) {
+            pressed_keys_['i'] = false;
+          } else {
+            pressed_keys_['u'] = use_left_arm_ ? false : true;
+          }
+        }
+        if (button_pressed) {
+          pressed_keys_['k'] = !pressed_keys_['i'];
+        } else {
+          pressed_keys_['o'] = !pressed_keys_['u'];
         }
       }
     }

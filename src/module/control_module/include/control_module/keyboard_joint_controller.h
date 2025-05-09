@@ -67,7 +67,7 @@ class KeyboardJointController : public ControllerBase {
   std::atomic<bool> running_{true};
   
   // Increment amount per keystroke
-  double angle_increment_ = 0.005;
+  double angle_increment_ = 0.01;
   
   // Store pressed keys
   std::mutex keys_mutex_;
@@ -77,7 +77,7 @@ class KeyboardJointController : public ControllerBase {
   std::mutex pose_mutex_;
   std::vector<double> current_pose_;
   std::vector<double> previous_pose_;
-  double movement_threshold_ = 0.03; // Threshold for movement detection
+  double movement_threshold_ = 0.003; // Threshold for movement detection
 };
 
 } // namespace xyber_x1_infer::rl_control_module 
